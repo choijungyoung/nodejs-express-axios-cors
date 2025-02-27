@@ -1,61 +1,58 @@
 // server.js
 
-const http = require('http');
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const port = 3000;
 
-// CORS 설정을 위한 헤더
-const headers = {
-  'Access-Control-Allow-Origin': "http://127.0.0.1:9000",
-  'Access-Control-Allow-Methods': 'OPTIONS, POST, GET, PUT, DELETE',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// 미들웨어 설정
+app.use(cors());  // CORS 활성화
+app.use(express.json());  // JSON 파싱
+app.use(express.static('public'));  // 정적 파일 제공
 
-let data = { message: '여러분 화이팅!' };
+// 메모 데이터 저장소
+let memos = [];
 
-const server = http.createServer((req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, headers);
-    res.end();
-    return;
-  }
-
-  if (req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json', ...headers });
-    res.end(JSON.stringify(data));
-  }
-
-  if (req.method === 'POST') {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk.toString();
-    });
-
-    req.on('end', () => {
-      data.message = body;
-      res.writeHead(200, headers);
-      res.end(`받은 POST 데이터: ${body}`);
-    });
-  }
-
-  if (req.method === 'PUT') {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk.toString();
-    });
-
-    req.on('end', () => {
-      data.message = body;
-      res.writeHead(200, headers);
-      res.end(`업데이트된 데이터: ${body}`);
-    });
-  }
-
-  if (req.method === 'DELETE') {
-    data = {};
-    res.writeHead(200, headers);
-    res.end('데이터가 삭제되었습니다.');
-  }
+// 라우트 설정
+// 메모 조회
+app.get('/api/memos', (req, res) => {
+    res.json(memos);
 });
 
-server.listen(3000, () => {
-  console.log('서버가 http://localhost:3000/ 에서 실행 중입니다.');
+// 메모 생성
+app.post('/api/memos', (req, res) => {
+    const newMemo = {
+        id: Date.now(),
+        content: req.body.content
+    };
+    memos.push(newMemo);
+    res.json(newMemo);
+});
+
+// 메모 수정
+app.put('/api/memos/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = memos.findIndex(memo => memo.id === id);
+    
+    if (index !== -1) {
+        memos[index] = {
+            ...memos[index],
+            content: req.body.content
+        };
+        res.json(memos[index]);
+    } else {
+        res.status(404).json({ message: '메모를 찾을 수 없습니다.' });
+    }
+});
+
+// 메모 삭제
+app.delete('/api/memos/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    memos = memos.filter(memo => memo.id !== id);
+    res.json({ message: '메모가 삭제되었습니다.' });
+});
+
+// 서버 시작
+app.listen(port, () => {
+    console.log(`서버가 http://localhost:${port} 에서 실행 중입니다.`);
 });
